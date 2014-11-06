@@ -1,0 +1,27 @@
+{
+  "name": "hubot-elasticsearch",
+  "description": "A Hubot script for interacting with an ElasticSearch cluster",
+  "version": "0.1.0",
+  "author": "Paul Stack <public@paulstack.co.uk>",
+  "license": "MIT",
+  "keywords": "hubot, hubot-scripts, elasticsearch",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/stack72/hubot-elasticsearch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stack72/hubot-elasticsearch/issues"
+  },
+  "dependencies": {
+    "querystring": "0.2.x"
+  },
+  "peerDependencies": {
+    "hubot": "2.x"
+  },
+  "devDependencies": {
+    "hubot": "2.x"
+  },
+  "main": "index.coffee",
+  "scripts": {
+  }
+}
