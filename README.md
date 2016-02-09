@@ -1,7 +1,7 @@
 hubot-elasticsearch
 ==
 
-A Hubot script for interacting with an [elasticsearch](http://www.elasticsearch.org/x) cluster
+A Hubot script for interacting with an [elasticsearch](http://www.elasticsearch.org/) cluster
 
 Installation
 ---
