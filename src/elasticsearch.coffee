@@ -6,8 +6,10 @@
 #   hubot: elasticsearch cat nodes [cluster]                    - Gets the information from the cat nodes endpoint for the given server or alias
 #   hubot: elasticsearch cat indices <like logastsh*> [cluster] - Gets the information from the cat indexes endpoint for the given server or alias
 #   hubot: elasticsearch cat allocation [cluster]               - Gets the information from the cat allocation endpoint for the given server or alias
+#   hubot: elasticsearch cat recovery [cluster]               - Gets the information from the cat allocation endpoint for the given server or alias
 #   hubot: elasticsearch clear cache [cluster]                  - Clears the cache for the specified cluster
 #   hubot: elasticsearch cluster settings [cluster]             - Gets a list of all of the settings stored for the cluster
+#   hubot: elasticsearch concurrent recoveries [number]         - Sets the number of simultaneous shards to recover
 #   hubot: elasticsearch index settings [cluster] [index]       - Gets a list of all of the settings stored for a particular index
 #   hubot: elasticsearch disable allocation [cluster]           - disables shard allocation to allow nodes to be taken offline
 #   hubot: elasticsearch enable allocation [cluster]            - renables shard allocation
@@ -95,6 +97,23 @@ module.exports = (robot) ->
           list = [header].concat(lines.sort().reverse()).join("\n")
           formattedSend(list, msg)
 
+  recoveryIsDone = (recovery) ->
+    return !recovery.match(/.*\s+\d+\s+\d+\s+[a-z]*\s+done/i)
+
+  catRecovery = (msg, alias) ->
+    cluster_url = _esAliases[alias]
+
+    if cluster_url == "" || cluster_url == undefined
+      msg.send("Do not recognise the cluster alias: #{alias}")
+    else
+      msg.send("Getting the cat allocation for the cluster: #{cluster_url}")
+      msg.http("#{cluster_url}/_cat/recovery/?v")
+        .get() (err, res, body) ->
+          lines = body.split("\n")
+          header = lines.shift()
+          list = [header].concat(lines.filter(recoveryIsDone).sort().reverse()).join("\n")
+          formattedSend(list, msg)
+
   clearCache = (msg, alias) ->
     cluster_url = _esAliases[alias]
 
@@ -109,6 +128,25 @@ module.exports = (robot) ->
           successful = json['_shards']['successful']
           failure = json['_shards']['failed']
           msg.send "Results: \n Total Shards: #{shards} \n Successful: #{successful} \n Failure: #{failure}"
+
+  concurrentRecoveries = (msg, count, alias) ->
+    cluster_url = _esAliases[alias]
+
+    if cluster_url == "" || cluster_url == undefined
+      msg.send("Do not recognise the cluster alias: #{alias}")
+    else
+      msg.send("Disabling Allocation for the cluster #{cluster_url}")
+
+      data = {
+        'transient': {
+          'cluster.routing.allocation.node_concurrent_recoveries': count
+        }
+      }
+
+      json = JSON.stringify(data)
+      msg.http("#{cluster_url}/_cluster/settings")
+        .put(json) (err, res, body) ->
+          formattedSend(body, msg)
 
   disableAllocation = (msg, alias) ->
     cluster_url = _esAliases[alias]
@@ -209,6 +247,13 @@ module.exports = (robot) ->
     catAllocation msg, msg.match[1], (text) ->
       msg.send text
 
+  robot.hear /elasticsearch cat recovery (.*)/i, (msg) ->
+    if msg.message.user.id is robot.name
+      return
+
+    catRecovery msg, msg.match[1], (text) ->
+      msg.send text
+
   robot.hear /elasticsearch cluster settings (.*)/i, (msg) ->
     if msg.message.user.id is robot.name
       return
@@ -256,6 +301,13 @@ module.exports = (robot) ->
       return
 
     clearCache msg, msg.match[1], (text) ->
+      msg.send(text)
+
+  robot.respond /elasticsearch concurrent recoveries (\d*) (.*)/i, (msg) ->
+    if msg.message.user.id is robot.name
+      return
+
+    concurrentRecoveries msg, msg.match[1], msg.match[2], (text) ->
       msg.send(text)
 
   robot.respond /elasticsearch disable allocation (.*)/i, (msg) ->
